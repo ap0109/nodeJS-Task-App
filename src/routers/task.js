@@ -18,14 +18,46 @@ router.post('/tasks', auth, async (req,res) => {
     }
 })
 
+// Get /tasks?completed=true
+// Get /tasks?limit=10&skip=20
+// Get /tasks?sortBy=createdAt:desc
 router.get('/tasks', auth , async (req, res) => {
     try {
+        const match = {}
+        const sort = {}
 
-        // First approach 
+        if(req.query.sortBy){
+            const parts =  req.query.sortBy.split(':')
+            sort[parts[0]] = parts[1] === 'desc' ? -1 : 1
+        }
+
+        if(req.query.completed){
+            match.completed =  req.query.completed === 'true'
+        }
+        // First approach  to fetch all the tasks
         //const tasks = await Task.find({owner: req.user._id})
 
-        // Second approach
-        await req.user.populate('tasks').execPopulate()
+        // Second approach to fetch all the tasks
+        //await req.user.populate('tasks').execPopulate()
+
+        // In this we have implemented filter when we are fetching the tasks without object destructuring
+        //  await req.user.populate({
+        //      path: 'tasks',
+        //      match: {
+        //          completed:true
+        //      }
+        //  }).execPopulate()
+
+        // With object destructuring
+        await req.user.populate({
+            path: 'tasks',
+            match,
+            options: {
+                limit: parseInt(req.query.limit),
+                skip: parseInt(req.query.skip),
+                sort
+            }
+        }).execPopulate()
 
         res.send(req.user.tasks)
     } catch (error) {
